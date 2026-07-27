@@ -1,4 +1,4 @@
-import type { NextResponse } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import type { z, ZodObject, ZodRawShape, ZodType } from "zod";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
@@ -82,13 +82,13 @@ export type MetaFor<Docs extends RouteDocs, M extends RouteMethod> = M extends "
 // defineRoute に渡す handler 自体の型。req, ctx に加えて、docs[method] を解決した meta を第三引数として受け取れる。
 // Array.prototype.map の callback などと同様、meta を使わない場合は宣言自体を省略してよい
 export type DefineRouteHandlerFn<Op extends OperationDoc> = (
-  req: any,
+  req: NextRequest,
   ctx: ParamsOf<Op>,
   meta: Op,
 ) => MaybePromise<ResponseUnion<Op["responses"]>>;
 
 export type GenericDefineRouteHandlerFn = (
-  req: any,
+  req: NextRequest,
   ctx: { params: Promise<Record<string, string>> },
   meta: undefined,
 ) => MaybePromise<NextResponse<unknown>>;

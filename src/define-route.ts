@@ -1,3 +1,5 @@
+import type { NextRequest } from "next/server";
+
 import type { DefineRouteHandlerFnFor, MetaFor, OperationDoc, RouteDocs, RouteHandlerFnFor, RouteMethod } from "./types";
 
 /**
@@ -16,8 +18,8 @@ export const defineRoute = <Docs extends RouteDocs, M extends RouteMethod>(
   handler: DefineRouteHandlerFnFor<Docs, M>,
 ): RouteHandlerFnFor<Docs, M> => {
   const meta = (docs as Partial<Record<string, OperationDoc>>)[method] as MetaFor<Docs, M>;
-  const wrapped = (req: Request, ctx: unknown) =>
-    (handler as (req: Request, ctx: unknown, meta: MetaFor<Docs, M>) => unknown)(req, ctx, meta);
+  const wrapped = (req: NextRequest, ctx: unknown) =>
+    (handler as (req: NextRequest, ctx: unknown, meta: MetaFor<Docs, M>) => unknown)(req, ctx, meta);
 
   return wrapped as RouteHandlerFnFor<Docs, M>;
 };
