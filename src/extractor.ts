@@ -1,6 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { zodToOpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { register } from "tsx/esm/api";
 import ts from "typescript";
 import {
@@ -10,6 +11,21 @@ import {
 } from "./components";
 import { resolveAliasPath } from "./tsconfig-paths";
 import type { RouteDocs } from "./types";
+
+// キャッシュファイル内の __routespecOpenapi から呼ばれる、refId の登録関数。
+// zod-to-openapi はスキーマインスタンスをキーにした自前のレジストリから refId を読むため、
+// zod のモジュールインスタンスが分裂していても、この関数経由で登録すれば生成側に届く。
+// zod の globalRegistry（.meta({ id })）は同じ id を 2 回登録すると例外になり、
+// ルートごとに同じ共有スキーマを登録する用途には使えない
+const REGISTER_REF_ID_KEY = "__routespecRegisterRefId";
+
+(globalThis as Record<string, unknown>)[REGISTER_REF_ID_KEY] = (schema: object, refId: string) => {
+  const current = zodToOpenAPIRegistry.get(schema as Parameters<typeof zodToOpenAPIRegistry.get>[0]);
+  zodToOpenAPIRegistry.add(schema as Parameters<typeof zodToOpenAPIRegistry.add>[0], {
+    ...current,
+    _internal: { ...current?._internal, refId },
+  });
+};
 
 type ExtractedModule = {
   openapi?: RouteDocs;
@@ -143,16 +159,16 @@ const extractOpenApiModuleSource = (
 
   const moduleSource = [
     // 共有スキーマへの refId 付与は zod のプロトタイプ拡張（extendZodWithOpenApi）ではなく、
-    // _def.openapi へ直接書き込む自己完結のヘルパーで行う。プロトタイプ拡張はキャッシュファイルと
+    // 生成側が globalThis に置いた登録関数で行う。プロトタイプ拡張はキャッシュファイルと
     // 共有スキーマ側で zod のモジュールインスタンスが分裂する環境（tsx のローダー実装や Node の
     // バージョンに依存して発生する）では届かないが、この方式はインスタンスの同一性に依存しない。
-    // 生成側（openapi.ts）も _def.openapi をプレーンなプロパティとして読むだけなので整合する
+    // 元のスキーマではなく clone() に登録するのは、同じスキーマを入れ子で使う別の共有スキーマや
+    // 派生スキーマへ refId が伝播しないようにするため。clone() は _zod.parent で元のスキーマを
+    // 指すので、元のスキーマの description などのメタデータは引き継がれる
     `const __routespecOpenapi = (schema: any, refId: string) => {`,
-    `  const def = schema._def;`,
-    `  return new schema.constructor({`,
-    `    ...def,`,
-    `    openapi: { ...def.openapi, _internal: { ...def.openapi?._internal, refId } },`,
-    `  });`,
+    `  const clone = schema.clone();`,
+    `  (globalThis as any).${REGISTER_REF_ID_KEY}(clone, refId);`,
+    `  return clone;`,
     `};`,
     ...imports,
     `export const openapi = ${initializerText};`,
