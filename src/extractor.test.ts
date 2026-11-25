@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getRefId } from "@asteasolutions/zod-to-openapi";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { importOpenApiDocs } from "./extractor";
 
@@ -94,10 +95,8 @@ describe("importOpenApiDocs", () => {
     ]);
 
     // 実行時に注入された .openapi() が実際に zod スキーマへ refId を登録していることまで確認する
-    const notFoundSchema = result.docs?.GET?.responses[404]?.schema as {
-      _def?: { openapi?: { _internal?: { refId?: string } } };
-    };
-    expect(notFoundSchema?._def?.openapi?._internal?.refId).toBe("ErrorResponse");
+    const notFoundSchema = result.docs?.GET?.responses[404]?.schema;
+    expect(notFoundSchema && getRefId(notFoundSchema)).toBe("ErrorResponse");
   });
 
   it("route.ts に openapi 変数がなければ、隣接する openapi.ts から抽出する", async () => {
