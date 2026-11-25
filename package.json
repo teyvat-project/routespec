@@ -6,11 +6,11 @@
   "author": "MOCHIZUKI Kanon",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mika-f/routespec.git"
+    "url": "git+https://github.com/teyvat-project/routespec.git"
   },
-  "homepage": "https://github.com/mika-f/routespec#readme",
+  "homepage": "https://github.com/teyvat-project/routespec#readme",
   "bugs": {
-    "url": "https://github.com/mika-f/routespec/issues"
+    "url": "https://github.com/teyvat-project/routespec/issues"
   },
   "keywords": [
     "openapi",
